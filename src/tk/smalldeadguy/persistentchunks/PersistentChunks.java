@@ -31,7 +31,16 @@ public class PersistentChunks extends JavaPlugin implements Listener {
 
 	@Override
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-		if(command.getName().equalsIgnoreCase("pc")) {
+		String name = command.getName();
+		if(name.toLowerCase().startsWith("pc") && name.length() > 2) {
+			String[] temp = args.clone();
+			args = new String[temp.length + 1];
+			args[0] = name.substring(2);
+			name = "pc";
+			for(int i = 0; i < temp.length; i++)
+				args[i + 1] = temp[i];
+		}
+		if(name.equalsIgnoreCase("pc")) {
 			if(args.length == 1 && args[0].equalsIgnoreCase("status")) {
 				String chunks = "";
 				for(Chunk c : saveChunks)
