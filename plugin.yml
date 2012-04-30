@@ -1,0 +1,34 @@
+name: PersistentChunks
+author: Alex Gilday (SmallDeadGuy)
+
+main: tk.smalldeadguy.persistentchunks.PersistentChunks
+version: 0.1.0
+
+commands:
+   pc:
+      description: Generic Persistent Chunks command
+      usage: /<command> [add|remove|status|current] ...
+
+   pcadd:
+      description: Adds current chunk to be persisted
+      usage: /<command>
+      permission: persistentchunks.modify
+      permission-message: Not allowed!
+      
+   pcremove:
+      description: Removes current or all chunks from persist list
+      usage: /<command> [all]
+      permission: persistentchunks.modify
+      permission-message: Not allowed!
+      
+   pcstatus:
+      description: View all chunks being persisted
+      usage: /<command>
+      permission: persistentchunks.status
+      permission-message: Not allowed!
+      
+   pccurrent:
+      description: View whether current chunk is being persisted
+      usage: /<command>
+      permission: persistentchunks.status
+      permission-message: Not allowed!
