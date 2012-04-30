@@ -1,7 +1,9 @@
 package tk.smalldeadguy.persistentchunks;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import org.bukkit.command.Command;
@@ -19,7 +21,7 @@ import org.bukkit.util.Vector;
 public class PersistentChunks extends JavaPlugin implements Listener {
 
 	public Logger log;
-	public List<Chunk> saveChunks = new ArrayList<Chunk>();
+	public Set<Chunk> saveChunks = new HashSet<Chunk>();
 
 	@EventHandler
 	public void onChunkUnload(ChunkUnloadEvent cue) {
