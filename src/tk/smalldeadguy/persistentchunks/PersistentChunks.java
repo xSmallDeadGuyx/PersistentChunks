@@ -1,19 +1,30 @@
 package tk.smalldeadguy.persistentchunks;
 
+import java.io.BufferedOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.World;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
@@ -21,7 +32,53 @@ import org.bukkit.util.Vector;
 public class PersistentChunks extends JavaPlugin implements Listener {
 
 	public Logger log;
-	public Set<Chunk> saveChunks = new HashSet<Chunk>();
+	private Set<Chunk> saveChunks = new HashSet<>();
+
+	public void doSaveConfig() {
+		FileConfiguration fc = getConfig();
+		
+		fc.set("savedchunks", null);
+		ConfigurationSection savedChunks = fc.createSection("savedchunks");
+
+		for(Chunk ch : saveChunks)
+			savedChunks.getStringList(ch.getWorld().getName()).add("(" + ch.getX() + "," + ch.getZ() + ")");
+		
+		try {
+			fc.save("pc.yml");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void doLoadConfig() {
+		FileConfiguration fc = getConfig();
+		try {
+			fc.load("pc.yml");
+		} catch (IOException | InvalidConfigurationException e) {
+			e.printStackTrace();
+		}
+		
+		ConfigurationSection savedChunks = fc.getConfigurationSection("savedchunks");
+		Set<String> worlds = savedChunks.getKeys(true);
+
+		if(worlds != null) {
+			for(String world : worlds) {
+				if(world == null) continue;
+				log.info("Found persisting chunks in world '" + world + "'");
+				World w = getServer().getWorld(world);
+				List<String> chunks = savedChunks.getStringList(world);
+
+				for(String c : chunks) {
+					String[] vals = c.trim().substring(1, c.length()).split(",");
+					int x = Integer.parseInt(vals[0]);
+					int y = Integer.parseInt(vals[1]);
+					Chunk ch = w.getChunkAt(x, y);
+					ch.load();
+					saveChunks.add(ch);
+				}
+			}
+		}
+	}
 
 	@EventHandler
 	public void onChunkUnload(ChunkUnloadEvent cue) {
@@ -46,7 +103,7 @@ public class PersistentChunks extends JavaPlugin implements Listener {
 				for(Chunk c : saveChunks)
 					chunks += " (" + c.getX() + ", " + c.getZ() + ")";
 				sender.sendMessage(saveChunks.isEmpty() ? "No persisting chunks" : saveChunks.size() + " chunks persisting." + chunks);
-				
+
 				return true;
 			}
 			if(args.length == 1 && args[0].equalsIgnoreCase("current")) {
@@ -68,6 +125,7 @@ public class PersistentChunks extends JavaPlugin implements Listener {
 					else {
 						p.sendMessage("Chunk (" + c.getX() + ", " + c.getZ() + ") is now being persisted");
 						saveChunks.add(c);
+						doSaveConfig();
 					}
 				}
 				else
@@ -88,6 +146,7 @@ public class PersistentChunks extends JavaPlugin implements Listener {
 						if(saveChunks.contains(c)) {
 							p.sendMessage("Chunk (" + c.getX() + ", " + c.getZ() + ") is no longer being persisted");
 							saveChunks.remove(c);
+							doSaveConfig();
 						}
 						else
 							p.sendMessage("Current chunk is not being persisted");
@@ -101,16 +160,22 @@ public class PersistentChunks extends JavaPlugin implements Listener {
 		}
 		return false;
 	}
+	
+	@Override
+	public void onLoad() {
+		doLoadConfig();
+	}
 
-	public void onEnable(){
+	@Override
+	public void onEnable() {
 		getServer().getPluginManager().registerEvents(this, this);
 
 		log = getLogger();
 		log.info("Your plugin has been enabled!");
-
 	}
 
-	public void onDisable(){
+	@Override
+	public void onDisable() {
 		log.info("Your plugin has been disabled.");
 	}
 }
