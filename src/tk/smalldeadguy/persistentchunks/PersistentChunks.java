@@ -6,8 +6,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -39,37 +42,39 @@ public class PersistentChunks extends JavaPlugin implements Listener {
 		
 		fc.set("savedchunks", null);
 		ConfigurationSection savedChunks = fc.createSection("savedchunks");
-
-		for(Chunk ch : saveChunks)
-			savedChunks.getStringList(ch.getWorld().getName()).add("(" + ch.getX() + "," + ch.getZ() + ")");
 		
-		try {
-			fc.save("pc.yml");
-		} catch (IOException e) {
-			e.printStackTrace();
+		Map<String, List<String>> worlds = new HashMap<String, List<String>>();
+		for(Chunk ch : saveChunks) {
+			String world = ch.getWorld().getName();
+			int x = ch.getX();
+			int z = ch.getZ();
+			if(worlds.containsKey(world))
+				worlds.get(world).add("(" + x + "," + z + ")");
+			else {
+				List<String> chunks = new ArrayList<String>();
+				chunks.add("(" + x + "," + z + ")");
+				worlds.put(world, chunks);
+			}
 		}
+		for(Entry<String, List<String>> kv : worlds.entrySet()) {
+			savedChunks.set(kv.getKey(), kv.getValue());
+		}
+		saveConfig();
 	}
 
 	public void doLoadConfig() {
 		FileConfiguration fc = getConfig();
-		try {
-			fc.load("pc.yml");
-		} catch (IOException | InvalidConfigurationException e) {
-			e.printStackTrace();
-		}
 		
 		ConfigurationSection savedChunks = fc.getConfigurationSection("savedchunks");
 		Set<String> worlds = savedChunks.getKeys(true);
 
 		if(worlds != null) {
 			for(String world : worlds) {
-				if(world == null) continue;
-				log.info("Found persisting chunks in world '" + world + "'");
 				World w = getServer().getWorld(world);
 				List<String> chunks = savedChunks.getStringList(world);
 
 				for(String c : chunks) {
-					String[] vals = c.trim().substring(1, c.length()).split(",");
+					String[] vals = c.trim().substring(1, c.length() - 1).split(",");
 					int x = Integer.parseInt(vals[0]);
 					int y = Integer.parseInt(vals[1]);
 					Chunk ch = w.getChunkAt(x, y);
@@ -160,11 +165,6 @@ public class PersistentChunks extends JavaPlugin implements Listener {
 		}
 		return false;
 	}
-	
-	@Override
-	public void onLoad() {
-		doLoadConfig();
-	}
 
 	@Override
 	public void onEnable() {
@@ -172,6 +172,7 @@ public class PersistentChunks extends JavaPlugin implements Listener {
 
 		log = getLogger();
 		log.info("Your plugin has been enabled!");
+		doLoadConfig();
 	}
 
 	@Override
